@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // or "mysql" or "sqlite" depending on your setup
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  username          String             @unique
+  passwordHash      String
+  displayName       String?
+  profilePictureUrl String?
+  bio               String?
+  location          String?
+  isCreator         Boolean            @default(false)
+  role              String             @default("user")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  creatorProfile    CreatorProfile?
+  locationMeta      Location?
+  following         Connection[]       @relation("Following")
+  followers         Connection[]       @relation("Followers")
+  sentMessages      Message[]          @relation("SentMessages")
+  receivedMessages  Message[]          @relation("ReceivedMessages")
+}
+
+model CreatorProfile {
+  id                   String           @id @default(cuid())
+  user                 User             @relation(fields: [userId], references: [id])
+  userId               String           @unique
+  onlyfansUrl          String?
+  twitterUrl           String?
+  blueskyUrl           String?
+  websiteUrl           String?
+  ratePerMinute        Float?
+  availableForCollabs  Boolean          @default(false)
+
+  categories           CreatorCategory[]
+  mediaLinks           MediaLink[]
+}
+
+model Category {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  creators  CreatorCategory[]
+}
+
+model CreatorCategory {
+  id               String           @id @default(cuid())
+  creatorProfile   CreatorProfile  @relation(fields: [creatorProfileId], references: [id])
+  creatorProfileId String
+  category         Category        @relation(fields: [categoryId], references: [id])
+  categoryId       String
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
+  lat       Float
+  lng       Float
+  city      String?
+  state     String?
+  country   String?
+}
+
+model Connection {
+  id           String   @id @default(cuid())
+  follower     User     @relation("Following", fields: [followerId], references: [id])
+  followerId   String
+  followee     User     @relation("Followers", fields: [followeeId], references: [id])
+  followeeId   String
+  connectionType String
+  createdAt    DateTime @default(now())
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  senderId    String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId  String
+  content     String
+  sentAt      DateTime @default(now())
+  readAt      DateTime?
+}
+
+model MediaLink {
+  id               String           @id @default(cuid())
+  creatorProfile   CreatorProfile  @relation(fields: [creatorProfileId], references: [id])
+  creatorProfileId String
+  url              String
+  title            String?
+  mediaType        String           // "video", "image", etc.
+  createdAt        DateTime         @default(now())
+}
